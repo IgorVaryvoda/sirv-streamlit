@@ -20,6 +20,12 @@ st.title("Sirv Spin Conversion Tools")
 st.markdown("""
 This app allows you to convert Sirv 360° spins to various formats required by
 different platforms like MSC, Amazon, Grainger, Walmart, Home Depot, and Lowe's.
+
+**How it works:**
+1. Enter your Sirv API credentials in the sidebar
+2. Select a spin file from your account OR enter a spin URL manually
+3. Choose the platform you want to convert for and provide the required identifier
+4. Click the conversion button to generate a downloadable zip file
 """)
 
 # Sidebar for authentication
@@ -48,6 +54,10 @@ if 'conversion_results' not in st.session_state:
     st.session_state.conversion_results = []
 if 'selected_spin' not in st.session_state:
     st.session_state.selected_spin = ""
+if 'manual_spin_url' not in st.session_state:
+    st.session_state.manual_spin_url = ""
+if 'spin_selection_method' not in st.session_state:
+    st.session_state.spin_selection_method = "account"
 
 # Token management functions
 TOKEN_EXPIRY = 4.5 * 60  # 4.5 minutes in seconds (token expires after 5 minutes)
@@ -137,6 +147,26 @@ def get_spins():
     else:
         st.error(f"Error fetching spins: {response.status_code} - {response.text}")
         return []
+
+def get_spin_path():
+    """Get the selected spin path based on selection method."""
+    if st.session_state.spin_selection_method == "account":
+        return st.session_state.selected_spin
+    else:
+        # For manual URL entry, extract the path
+        url = st.session_state.manual_spin_url.strip()
+        # If the URL includes the account URL, extract just the path
+        if account_url and url.startswith(account_url):
+            return url.replace(account_url, "")
+        # If it's already a path starting with /, use it as is
+        elif url.startswith('/'):
+            return url
+        # If it's a full URL but not from the account domain, show error
+        elif url.startswith('http'):
+            st.error("The spin URL must be from your Sirv account domain.")
+            return None
+        # Otherwise, assume it's a path and add / if needed
+        return f"/{url}" if not url.startswith('/') else url
 
 # API conversion functions
 def convert_to_msc(spin_path, msc_id):
@@ -336,11 +366,13 @@ def move_zip_file(from_path, to_path):
 # Add a result to the conversion history
 def add_result(platform, identifier, url):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    spin_path = get_spin_path()
     result = {
         "timestamp": timestamp,
         "platform": platform,
         "identifier": identifier,
-        "url": url
+        "url": url,
+        "spin_path": spin_path
     }
     st.session_state.conversion_results.insert(0, result)  # Add to the beginning
 
@@ -348,25 +380,54 @@ def add_result(platform, identifier, url):
 tab1, tab2 = st.tabs(["Conversion Tools", "Conversion History"])
 
 with tab1:
-    # Test connection and fetch spins if credentials are provided
-    if client_id and client_secret and account_url:
-        if get_token():
-            spins = get_spins()
-            if spins:
-                st.session_state.selected_spin = st.selectbox(
-                    "Select a spin file to convert",
-                    spins,
-                    index=0 if st.session_state.selected_spin == "" else spins.index(st.session_state.selected_spin)
-                )
-            else:
-                st.warning("No spin files found in your Sirv account.")
-        else:
-            st.error("Failed to authenticate with Sirv API. Please check your credentials.")
-    else:
-        st.info("Please enter your Sirv API credentials in the sidebar to get started.")
+    # Spin selection section
+    st.header("Step 1: Select a Spin")
+    spin_selection_method = st.radio(
+        "Choose how to select your spin",
+        options=["Select from account", "Enter spin URL manually"],
+        horizontal=True,
+        key="spin_selection_radio",
+        on_change=lambda: setattr(st.session_state, 'spin_selection_method',
+                                 "account" if st.session_state.spin_selection_radio == "Select from account" else "manual")
+    )
 
-    # Only show conversion tools if a spin is selected
-    if st.session_state.selected_spin:
+    # Test connection and fetch spins if credentials are provided
+    if spin_selection_method == "Select from account":
+        st.session_state.spin_selection_method = "account"
+        if client_id and client_secret and account_url:
+            if get_token():
+                spins = get_spins()
+                if spins:
+                    st.session_state.selected_spin = st.selectbox(
+                        "Select a spin file to convert",
+                        spins,
+                        index=0 if st.session_state.selected_spin == "" else spins.index(st.session_state.selected_spin) if st.session_state.selected_spin in spins else 0
+                    )
+                    st.success(f"Selected spin: {st.session_state.selected_spin}")
+                else:
+                    st.warning("No spin files found in your Sirv account.")
+            else:
+                st.error("Failed to authenticate with Sirv API. Please check your credentials.")
+        else:
+            st.info("Please enter your Sirv API credentials in the sidebar to get started.")
+    else:
+        st.session_state.spin_selection_method = "manual"
+        st.session_state.manual_spin_url = st.text_input(
+            "Enter the spin URL or path",
+            value=st.session_state.manual_spin_url,
+            help="Enter the full URL to the .spin file or the path in your Sirv account (e.g., /folder/product.spin)"
+        )
+        if st.session_state.manual_spin_url:
+            spin_path = get_spin_path()
+            if spin_path:
+                st.success(f"Using spin path: {spin_path}")
+
+    # Only show conversion tools if a spin is selected or entered
+    spin_selected = (st.session_state.spin_selection_method == "account" and st.session_state.selected_spin) or \
+                   (st.session_state.spin_selection_method == "manual" and get_spin_path())
+
+    if spin_selected:
+        st.header("Step 2: Choose Conversion Format")
         st.markdown("---")
 
         # MSC Conversion
@@ -377,7 +438,7 @@ with tab1:
             if st.button("Convert to MSC Format"):
                 if msc_id:
                     with st.spinner("Converting to MSC format..."):
-                        result_url = convert_to_msc(st.session_state.selected_spin, msc_id)
+                        result_url = convert_to_msc(get_spin_path(), msc_id)
                         if result_url:
                             st.success(f"Successfully converted to MSC format!")
                             st.markdown(f"[Download MSC Zip]({result_url})")
@@ -394,7 +455,7 @@ with tab1:
             if st.button("Convert to Amazon Format"):
                 if asin:
                     with st.spinner("Converting to Amazon format..."):
-                        result_url = convert_to_amazon(st.session_state.selected_spin, asin)
+                        result_url = convert_to_amazon(get_spin_path(), asin)
                         if result_url:
                             st.success(f"Successfully converted to Amazon format!")
                             st.markdown(f"[Download Amazon Zip]({result_url})")
@@ -410,7 +471,7 @@ with tab1:
             if st.button("Convert to Grainger Format"):
                 if sku:
                     with st.spinner("Converting to Grainger format..."):
-                        result_url = convert_to_grainger(st.session_state.selected_spin, sku)
+                        result_url = convert_to_grainger(get_spin_path(), sku)
                         if result_url:
                             st.success(f"Successfully converted to Grainger format!")
                             st.markdown(f"[Download Grainger Zip]({result_url})")
@@ -426,7 +487,7 @@ with tab1:
             if st.button("Convert to Walmart Format"):
                 if gtin:
                     with st.spinner("Converting to Walmart format..."):
-                        result_url = convert_to_walmart(st.session_state.selected_spin, gtin)
+                        result_url = convert_to_walmart(get_spin_path(), gtin)
                         if result_url:
                             st.success(f"Successfully converted to Walmart format!")
                             st.markdown(f"[Download Walmart Zip]({result_url})")
@@ -449,7 +510,7 @@ with tab1:
                     if len(omsid) == 9:
                         with st.spinner("Converting to Home Depot format..."):
                             result_url = convert_to_homedepot(
-                                st.session_state.selected_spin,
+                                get_spin_path(),
                                 omsid,
                                 spin_number
                             )
@@ -470,7 +531,7 @@ with tab1:
             if st.button("Convert to Lowe's Format"):
                 if barcode:
                     with st.spinner("Converting to Lowe's format..."):
-                        result_url = convert_to_lowes(st.session_state.selected_spin, barcode)
+                        result_url = convert_to_lowes(get_spin_path(), barcode)
                         if result_url:
                             st.success(f"Successfully converted to Lowe's format!")
                             st.markdown(f"[Download Lowe's Zip]({result_url})")
@@ -490,10 +551,12 @@ with tab2:
 
         # Display the conversion history as a table
         for result in st.session_state.conversion_results:
-            col1, col2, col3 = st.columns([1, 1, 2])
+            col1, col2, col3 = st.columns([1.5, 1, 2])
             with col1:
                 st.write(f"**Platform:** {result['platform']}")
                 st.write(f"**ID:** {result['identifier']}")
+                if 'spin_path' in result:
+                    st.write(f"**Spin:** {result['spin_path']}")
             with col2:
                 st.write(f"**Time:** {result['timestamp']}")
             with col3:
