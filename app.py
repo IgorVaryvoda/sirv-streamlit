@@ -99,7 +99,16 @@ if 'token' not in st.session_state:
 if 'token_timestamp' not in st.session_state:
     st.session_state.token_timestamp = 0
 if 'conversion_results' not in st.session_state:
-    st.session_state.conversion_results = []
+    # Try to load conversion history from localStorage
+    saved_history = localStorage.getItem("conversion_history")
+    if saved_history:
+        try:
+            # Parse JSON string back into list of dictionaries
+            st.session_state.conversion_results = json.loads(saved_history)
+        except json.JSONDecodeError:
+            st.session_state.conversion_results = []
+    else:
+        st.session_state.conversion_results = []
 if 'selected_spin' not in st.session_state:
     st.session_state.selected_spin = ""
 if 'manual_spin_urls' not in st.session_state:
@@ -590,7 +599,16 @@ def add_result(platform, identifier, url, spin_path=None):
         "url": url,
         "spin_path": spin_path
     }
-    st.session_state.conversion_results.insert(0, result)  # Add to the beginning
+    # Add to the beginning of the list
+    st.session_state.conversion_results.insert(0, result)
+
+    # Save updated history to localStorage
+    try:
+        # Convert list to JSON string
+        history_json = json.dumps(st.session_state.conversion_results)
+        localStorage.setItem("conversion_history", history_json, key="save_history")
+    except Exception as e:
+        st.warning(f"Could not save conversion history: {str(e)}")
 
 # Run bulk conversion for a specific platform
 def run_bulk_conversion(platform, bulk_data):
@@ -914,6 +932,9 @@ with tab2:
 with tab3:
     st.header("Conversion History")
 
+    # Add information about localStorage persistence
+    st.info("Conversion history is saved in your browser and will persist between sessions.")
+
     if not st.session_state.conversion_results:
         st.info("No conversions have been performed yet.")
     else:
@@ -954,4 +975,6 @@ with tab3:
 
         if st.button("Clear History"):
             st.session_state.conversion_results = []
+            # Also clear the history in localStorage
+            localStorage.setItem("conversion_history", "[]", key="clear_history")
             st.experimental_rerun()
