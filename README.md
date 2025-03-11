@@ -4,11 +4,12 @@ A Streamlit application for converting Sirv 360° spins to various marketplace f
 
 ## Features
 
-- **Authentication**: Securely connect to your Sirv account
+- **Authentication**: Securely connect to your Sirv account with browser-based credential storage
 - **Multiple Conversion Options**: Convert spins to various marketplace formats
 - **Flexible Spin Selection**: Either select from your Sirv account or manually enter spin URLs
 - **Conversion History**: Track all of your conversions in one place
 - **User-friendly Interface**: Easy-to-use Streamlit interface
+- **Browser-Based Storage**: Securely store your credentials in your browser's localStorage
 
 ## Supported Platforms
 
@@ -49,18 +50,6 @@ A Streamlit application for converting Sirv 360° spins to various marketplace f
    uv pip install -r requirements.txt
    ```
 
-4. Create a `.env` file with your Sirv credentials:
-   ```
-   cp .env.example .env
-   ```
-
-   Then edit the `.env` file and add your Sirv credentials:
-   ```
-   SIRV_CLIENT_ID=your_client_id
-   SIRV_CLIENT_SECRET=your_client_secret
-   SIRV_ACCOUNT_URL=your_sirv_account_url
-   ```
-
 ### Usage
 
 1. Make sure you're in the project directory and your virtual environment is activated:
@@ -75,7 +64,7 @@ A Streamlit application for converting Sirv 360° spins to various marketplace f
 
 3. Access the app in your web browser at `http://localhost:8501`
 
-4. If you haven't set environment variables, enter your Sirv credentials in the sidebar.
+4. Enter your Sirv credentials in the sidebar. You can choose to save them to your browser by clicking the "Save Credentials to Your Browser" button. These credentials will be available the next time you access the app from the same browser.
 
 5. Select a spin in one of two ways:
    - **From your account**: Select a spin file from the dropdown of all spin files in your Sirv account
@@ -86,6 +75,15 @@ A Streamlit application for converting Sirv 360° spins to various marketplace f
 7. Click the Convert button and wait for the process to complete.
 
 8. Once conversion is finished, a download link will be provided, and the conversion will be added to your history.
+
+## Browser-Based Credential Storage
+
+The app uses browser localStorage to securely store your Sirv API credentials:
+
+- Credentials are stored only in your browser, not on the server
+- Each user has their own separate credentials
+- Credentials persist between sessions until cleared
+- You can clear your saved credentials at any time using the "Clear Saved Credentials" button
 
 ## Troubleshooting
 

@@ -5,13 +5,15 @@ import time
 import streamlit as st
 from datetime import datetime
 from dotenv import load_dotenv, set_key, find_dotenv
+from streamlit_local_storage import LocalStorage
 
-# Load environment variables
+# Initialize local storage
+localStorage = LocalStorage()
+
+# Load environment variables (keeping this for backward compatibility)
 dotenv_path = find_dotenv(raise_error_if_not_found=False)
 if dotenv_path:
     load_dotenv(dotenv_path)
-else:
-    dotenv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
 
 # App title and description
 st.set_page_config(
@@ -36,31 +38,32 @@ different platforms like MSC, Amazon, Grainger, Walmart, Home Depot, and Lowe's.
 # Sidebar for authentication
 st.sidebar.header("Authentication")
 
-# Check if credentials are in env vars, otherwise use input fields
-client_id = os.getenv("SIRV_CLIENT_ID", "")
-client_secret = os.getenv("SIRV_CLIENT_SECRET", "")
-account_url = os.getenv("SIRV_ACCOUNT_URL", "")
+# Check if credentials are in localStorage, if not fall back to env vars
+client_id = localStorage.getItem("sirv_client_id")
+if client_id is None:
+    client_id = os.getenv("SIRV_CLIENT_ID", "")
 
-# Function to save credentials to .env file
-def save_credentials_to_env(client_id, client_secret, account_url):
-    """Save credentials to .env file."""
+client_secret = localStorage.getItem("sirv_client_secret")
+if client_secret is None:
+    client_secret = os.getenv("SIRV_CLIENT_SECRET", "")
+
+account_url = localStorage.getItem("sirv_account_url")
+if account_url is None:
+    account_url = os.getenv("SIRV_ACCOUNT_URL", "")
+
+# Function to save credentials to localStorage
+def save_credentials_to_local_storage(client_id, client_secret, account_url):
+    """Save credentials to browser localStorage."""
     try:
-        if not os.path.exists(dotenv_path):
-            # Create empty .env file if it doesn't exist
-            with open(dotenv_path, 'w') as f:
-                pass
-
-        # Set each key in the .env file
-        set_key(dotenv_path, "SIRV_CLIENT_ID", client_id)
-        set_key(dotenv_path, "SIRV_CLIENT_SECRET", client_secret)
-        set_key(dotenv_path, "SIRV_ACCOUNT_URL", account_url)
-
+        localStorage.setItem("sirv_client_id", client_id)
+        localStorage.setItem("sirv_client_secret", client_secret)
+        localStorage.setItem("sirv_account_url", account_url)
         return True
     except Exception as e:
         st.sidebar.error(f"Error saving credentials: {str(e)}")
         return False
 
-# If any of the credentials are not in env vars, show input fields
+# If any of the credentials are not in localStorage, show input fields
 if not (client_id and client_secret and account_url):
     account_url = st.sidebar.text_input("Sirv Account URL", value=account_url,
                                        help="Your Sirv account URL, e.g., https://demo.sirv.com")
@@ -71,21 +74,24 @@ if not (client_id and client_secret and account_url):
 
     # Add save button
     if account_url and client_id and client_secret:
-        if st.sidebar.button("Save Credentials"):
-            if save_credentials_to_env(client_id, client_secret, account_url):
-                st.sidebar.success("Credentials saved successfully!")
+        if st.sidebar.button("Save Credentials to Your Browser"):
+            if save_credentials_to_local_storage(client_id, client_secret, account_url):
+                st.sidebar.success("Credentials saved in your browser!")
             else:
                 st.sidebar.error("Failed to save credentials.")
 else:
-    st.sidebar.success("✅ Credentials loaded from environment")
+    st.sidebar.success("✅ Credentials loaded from your browser")
 
     # Add button to clear credentials
     if st.sidebar.button("Clear Saved Credentials"):
-        if save_credentials_to_env("", "", ""):
-            st.sidebar.info("Credentials cleared. Please refresh the page.")
-            client_id = ""
-            client_secret = ""
-            account_url = ""
+        # Clear the credentials from localStorage
+        localStorage.setItem("sirv_client_id", "")
+        localStorage.setItem("sirv_client_secret", "")
+        localStorage.setItem("sirv_account_url", "")
+        st.sidebar.info("Credentials cleared. Please refresh the page.")
+        client_id = ""
+        client_secret = ""
+        account_url = ""
 
 # Initialize session state for token management
 if 'token' not in st.session_state:
