@@ -39,15 +39,15 @@ different platforms like MSC, Amazon, Grainger, Walmart, Home Depot, and Lowe's.
 st.sidebar.header("Authentication")
 
 # Check if credentials are in localStorage, if not fall back to env vars
-client_id = localStorage.getItem("sirv_client_id", key="get_client_id")
+client_id = localStorage.getItem("sirv_client_id")
 if client_id is None:
     client_id = os.getenv("SIRV_CLIENT_ID", "")
 
-client_secret = localStorage.getItem("sirv_client_secret", key="get_client_secret")
+client_secret = localStorage.getItem("sirv_client_secret")
 if client_secret is None:
     client_secret = os.getenv("SIRV_CLIENT_SECRET", "")
 
-account_url = localStorage.getItem("sirv_account_url", key="get_account_url")
+account_url = localStorage.getItem("sirv_account_url")
 if account_url is None:
     account_url = os.getenv("SIRV_ACCOUNT_URL", "")
 
@@ -944,8 +944,10 @@ with tab3:
             with col4:
                 # Add a button to view the full spin
                 if 'spin_path' in result:
-                    spin_url = get_thumbnail_url(result['spin_path']).replace('?thumb', '')
-                    if spin_url:
+                    spin_path = result['spin_path']
+                    thumbnail_url = get_thumbnail_url(spin_path)
+                    if thumbnail_url:
+                        spin_url = thumbnail_url.replace('?thumb', '')
                         st.markdown(f"[View Spin]({spin_url})")
 
             st.divider()
