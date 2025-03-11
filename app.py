@@ -39,15 +39,15 @@ different platforms like MSC, Amazon, Grainger, Walmart, Home Depot, and Lowe's.
 st.sidebar.header("Authentication")
 
 # Check if credentials are in localStorage, if not fall back to env vars
-client_id = localStorage.getItem("sirv_client_id")
+client_id = localStorage.getItem("sirv_client_id", key="get_client_id")
 if client_id is None:
     client_id = os.getenv("SIRV_CLIENT_ID", "")
 
-client_secret = localStorage.getItem("sirv_client_secret")
+client_secret = localStorage.getItem("sirv_client_secret", key="get_client_secret")
 if client_secret is None:
     client_secret = os.getenv("SIRV_CLIENT_SECRET", "")
 
-account_url = localStorage.getItem("sirv_account_url")
+account_url = localStorage.getItem("sirv_account_url", key="get_account_url")
 if account_url is None:
     account_url = os.getenv("SIRV_ACCOUNT_URL", "")
 
@@ -55,9 +55,9 @@ if account_url is None:
 def save_credentials_to_local_storage(client_id, client_secret, account_url):
     """Save credentials to browser localStorage."""
     try:
-        localStorage.setItem("sirv_client_id", client_id)
-        localStorage.setItem("sirv_client_secret", client_secret)
-        localStorage.setItem("sirv_account_url", account_url)
+        localStorage.setItem("sirv_client_id", client_id, key="save_client_id")
+        localStorage.setItem("sirv_client_secret", client_secret, key="save_client_secret")
+        localStorage.setItem("sirv_account_url", account_url, key="save_account_url")
         return True
     except Exception as e:
         st.sidebar.error(f"Error saving credentials: {str(e)}")
@@ -85,9 +85,9 @@ else:
     # Add button to clear credentials
     if st.sidebar.button("Clear Saved Credentials"):
         # Clear the credentials from localStorage
-        localStorage.setItem("sirv_client_id", "")
-        localStorage.setItem("sirv_client_secret", "")
-        localStorage.setItem("sirv_account_url", "")
+        localStorage.setItem("sirv_client_id", "", key="clear_client_id")
+        localStorage.setItem("sirv_client_secret", "", key="clear_client_secret")
+        localStorage.setItem("sirv_account_url", "", key="clear_account_url")
         st.sidebar.info("Credentials cleared. Please refresh the page.")
         client_id = ""
         client_secret = ""
