@@ -26,6 +26,7 @@ different platforms like MSC, Amazon, Grainger, Walmart, Home Depot, and Lowe's.
 2. Select a spin file from your account OR enter one or more spin URLs manually
 3. Choose the platform you want to convert for and provide the required identifier
 4. Click the conversion button to generate a downloadable zip file
+5. Use the Bulk Conversion feature for processing multiple spins at once
 """)
 
 # Sidebar for authentication
@@ -60,6 +61,8 @@ if 'selected_manual_spin' not in st.session_state:
     st.session_state.selected_manual_spin = ""
 if 'spin_selection_method' not in st.session_state:
     st.session_state.spin_selection_method = "account"
+if 'bulk_conversion_data' not in st.session_state:
+    st.session_state.bulk_conversion_data = []
 
 # Token management functions
 TOKEN_EXPIRY = 4.5 * 60  # 4.5 minutes in seconds (token expires after 5 minutes)
@@ -243,6 +246,67 @@ def process_manual_spin_urls(text_input):
         urls.append(path)
 
     return urls
+
+def process_bulk_conversion_data(text_input):
+    """Process bulk conversion data in format: spin_url,identifier."""
+    bulk_data = []
+
+    # Split by newlines and process each line
+    lines = text_input.strip().split('\n')
+    for line_num, line in enumerate(lines, 1):
+        line = line.strip()
+        if not line:
+            continue
+
+        # Check if line contains a comma for spin_url,identifier format
+        parts = line.split(',', 1)  # Split only on the first comma
+        if len(parts) != 2:
+            st.warning(f"Line {line_num} skipped: Invalid format. Expected 'spin_url,identifier'")
+            continue
+
+        spin_url = parts[0].strip()
+        identifier = parts[1].strip()
+
+        if not spin_url or not identifier:
+            st.warning(f"Line {line_num} skipped: Empty spin URL or identifier")
+            continue
+
+        # Process the spin URL to get the path
+        # First, remove any @ prefix if present
+        if spin_url.startswith('@'):
+            spin_url = spin_url[1:]
+
+        # If the URL includes the account URL, extract just the path
+        if account_url and spin_url.startswith(account_url):
+            path = spin_url.replace(account_url, "")
+        # If it's already a path starting with /, use it as is
+        elif spin_url.startswith('/'):
+            path = spin_url
+        # If it's a full URL, try to extract the path
+        elif spin_url.startswith('http'):
+            # Try to extract the path portion after the domain
+            try:
+                from urllib.parse import urlparse
+                parsed_url = urlparse(spin_url)
+                path = parsed_url.path
+            except:
+                # If parsing fails, just use the URL as is and let the API handle it
+                path = spin_url
+        # Otherwise, assume it's a path and add / if needed
+        else:
+            path = f"/{spin_url}" if not spin_url.startswith('/') else spin_url
+
+        # Validate that it's a spin file
+        if not path.endswith('.spin'):
+            path = f"{path}.spin" if not path.endswith('/') else f"{path}spin.spin"
+
+        bulk_data.append({
+            'spin_path': path,
+            'identifier': identifier,
+            'original_url': spin_url
+        })
+
+    return bulk_data
 
 def get_spin_path():
     """Get the selected spin path based on selection method."""
@@ -448,9 +512,10 @@ def move_zip_file(from_path, to_path):
         return False
 
 # Add a result to the conversion history
-def add_result(platform, identifier, url):
+def add_result(platform, identifier, url, spin_path=None):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    spin_path = get_spin_path()
+    if not spin_path:
+        spin_path = get_spin_path()
     result = {
         "timestamp": timestamp,
         "platform": platform,
@@ -460,8 +525,74 @@ def add_result(platform, identifier, url):
     }
     st.session_state.conversion_results.insert(0, result)  # Add to the beginning
 
+# Run bulk conversion for a specific platform
+def run_bulk_conversion(platform, bulk_data):
+    """Run bulk conversion for specified platform."""
+    results = []
+    successes = 0
+    failures = 0
+
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
+    for i, item in enumerate(bulk_data):
+        spin_path = item['spin_path']
+        identifier = item['identifier']
+
+        # Update progress
+        progress = (i / len(bulk_data))
+        progress_bar.progress(progress)
+        status_text.text(f"Processing {i+1} of {len(bulk_data)}: {spin_path}")
+
+        result_url = None
+
+        # Call the appropriate conversion function based on platform
+        try:
+            if platform == "MSC":
+                result_url = convert_to_msc(spin_path, identifier)
+            elif platform == "Amazon":
+                result_url = convert_to_amazon(spin_path, identifier)
+            elif platform == "Grainger":
+                result_url = convert_to_grainger(spin_path, identifier)
+            elif platform == "Walmart":
+                result_url = convert_to_walmart(spin_path, identifier)
+            elif platform == "Home Depot":
+                # For Home Depot, the identifier should be a 9-digit OMSID
+                if len(identifier) == 9:
+                    result_url = convert_to_homedepot(spin_path, identifier)
+                else:
+                    st.warning(f"Skipping Home Depot conversion for {spin_path}: ID {identifier} must be 9 digits")
+            elif platform == "Lowes":
+                result_url = convert_to_lowes(spin_path, identifier)
+        except Exception as e:
+            st.error(f"Error converting {spin_path}: {str(e)}")
+            failures += 1
+            continue
+
+        if result_url:
+            successes += 1
+            results.append({
+                'spin_path': spin_path,
+                'identifier': identifier,
+                'url': result_url
+            })
+            # Add to conversion history
+            add_result(platform, identifier, result_url, spin_path)
+        else:
+            failures += 1
+
+    # Complete the progress bar
+    progress_bar.progress(1.0)
+    status_text.text("Processing complete!")
+
+    return {
+        'results': results,
+        'successes': successes,
+        'failures': failures
+    }
+
 # Main app interface
-tab1, tab2 = st.tabs(["Conversion Tools", "Conversion History"])
+tab1, tab2, tab3 = st.tabs(["Conversion Tools", "Bulk Conversion", "Conversion History"])
 
 with tab1:
     # Spin selection section
@@ -648,8 +779,64 @@ with tab1:
                 else:
                     st.warning("Please enter a Lowe's Barcode.")
 
-# Conversion History tab
+# Bulk Conversion tab
 with tab2:
+    st.header("Bulk Conversion")
+    st.markdown("""
+    Convert multiple spins at once. Enter your data in the format: `spin_url,identifier` (one per line).
+
+    Examples:
+    ```
+    https://sirvreplit.sirv.com/Spins/Trainers/Trainers.spin,887276371399
+    https://sirvreplit.sirv.com/Spins/Egg-Chair/Egg-Chair.spin,799123761
+    ```
+
+    You can also use the `@` prefix for the URL (it will be ignored):
+    ```
+    @https://sirvreplit.sirv.com/Spins/Trainers/Trainers.spin,887276371399
+    ```
+    """)
+
+    # Platform selection for bulk conversion
+    bulk_platform = st.selectbox(
+        "Select conversion platform",
+        options=["MSC", "Amazon", "Grainger", "Walmart", "Home Depot", "Lowes"],
+        index=0
+    )
+
+    bulk_input = st.text_area(
+        "Enter spin URLs and identifiers (one per line in format: spin_url,identifier)",
+        height=200,
+        help="Enter data in format: spin_url,identifier (one per line)"
+    )
+
+    if st.button("Process Bulk Conversion"):
+        if bulk_input and bulk_platform:
+            # Process the bulk input data
+            bulk_data = process_bulk_conversion_data(bulk_input)
+
+            if bulk_data:
+                st.session_state.bulk_conversion_data = bulk_data
+                st.success(f"Found {len(bulk_data)} items to process")
+
+                # Run the bulk conversion
+                with st.spinner(f"Processing {len(bulk_data)} conversions to {bulk_platform} format..."):
+                    results = run_bulk_conversion(bulk_platform, bulk_data)
+
+                # Show the results
+                st.success(f"Bulk conversion completed: {results['successes']} successful, {results['failures']} failed")
+
+                if results['results']:
+                    st.subheader("Download Links")
+                    for idx, result in enumerate(results['results']):
+                        st.markdown(f"{idx+1}. **{result['identifier']}**: [{result['spin_path']}]({result['url']})")
+            else:
+                st.error("No valid data found. Please check your input format.")
+        else:
+            st.warning("Please enter data and select a platform.")
+
+# Conversion History tab
+with tab3:
     st.header("Conversion History")
 
     if not st.session_state.conversion_results:
