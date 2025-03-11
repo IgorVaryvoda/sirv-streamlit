@@ -363,6 +363,26 @@ def get_spin_path():
         # For manual URL entry, return the selected manual spin
         return st.session_state.selected_manual_spin
 
+# Add this function after get_spin_path() function
+def get_thumbnail_url(spin_path):
+    """Generate a thumbnail URL for a spin."""
+    # If it's already a full URL, just add ?thumb
+    if spin_path.startswith('http'):
+        return f"{spin_path}?thumb"
+
+    # If it's a path and we have an account URL, combine them
+    if account_url:
+        # Make sure there's no double slash between account_url and spin_path
+        if account_url.endswith('/') and spin_path.startswith('/'):
+            return f"{account_url}{spin_path[1:]}?thumb"
+        elif not account_url.endswith('/') and not spin_path.startswith('/'):
+            return f"{account_url}/{spin_path}?thumb"
+        else:
+            return f"{account_url}{spin_path}?thumb"
+
+    # If no account_url is available, return None
+    return None
+
 # API conversion functions
 def convert_to_msc(spin_path, msc_id):
     """Convert spin to MSC format."""
@@ -667,6 +687,10 @@ with tab1:
                         index=0 if st.session_state.selected_spin == "" else spins.index(st.session_state.selected_spin) if st.session_state.selected_spin in spins else 0
                     )
                     st.success(f"Selected spin: {st.session_state.selected_spin}")
+                    # Display thumbnail for the selected spin
+                    thumbnail_url = get_thumbnail_url(st.session_state.selected_spin)
+                    if thumbnail_url:
+                        st.image(thumbnail_url, caption="Spin Thumbnail", width=300)
                 else:
                     st.warning("No spin files found in your Sirv account.")
             else:
@@ -702,6 +726,10 @@ with tab1:
             )
 
             st.success(f"Selected spin: {st.session_state.selected_manual_spin}")
+            # Display thumbnail for the selected manual spin
+            thumbnail_url = get_thumbnail_url(st.session_state.selected_manual_spin)
+            if thumbnail_url:
+                st.image(thumbnail_url, caption="Spin Thumbnail", width=300)
 
             # Add button to clear the list
             if st.button("Clear Spin List"):
@@ -892,18 +920,34 @@ with tab3:
         # Create a dataframe for the conversion history
         st.write(f"Total conversions: {len(st.session_state.conversion_results)}")
 
-        # Display the conversion history as a table
+        # Display the conversion history as a table with thumbnails
         for result in st.session_state.conversion_results:
-            col1, col2, col3 = st.columns([1.5, 1, 2])
+            col1, col2, col3, col4 = st.columns([1, 1, 1.5, 0.5])
+
+            # Display thumbnail in the first column
             with col1:
+                if 'spin_path' in result:
+                    thumbnail_url = get_thumbnail_url(result['spin_path'])
+                    if thumbnail_url:
+                        st.image(thumbnail_url, width=100)
+
+            with col2:
                 st.write(f"**Platform:** {result['platform']}")
                 st.write(f"**ID:** {result['identifier']}")
                 if 'spin_path' in result:
-                    st.write(f"**Spin:** {result['spin_path']}")
-            with col2:
-                st.write(f"**Time:** {result['timestamp']}")
+                    st.write(f"**Spin:** {os.path.basename(result['spin_path'])}")
+
             with col3:
+                st.write(f"**Time:** {result['timestamp']}")
                 st.write(f"**Download:** [Link]({result['url']})")
+
+            with col4:
+                # Add a button to view the full spin
+                if 'spin_path' in result:
+                    spin_url = get_thumbnail_url(result['spin_path']).replace('?thumb', '')
+                    if spin_url:
+                        st.markdown(f"[View Spin]({spin_url})")
+
             st.divider()
 
         if st.button("Clear History"):
