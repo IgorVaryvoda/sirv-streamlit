@@ -23,7 +23,7 @@ different platforms like MSC, Amazon, Grainger, Walmart, Home Depot, and Lowe's.
 
 **How it works:**
 1. Enter your Sirv API credentials in the sidebar
-2. Select a spin file from your account OR enter a spin URL manually
+2. Select a spin file from your account OR enter one or more spin URLs manually
 3. Choose the platform you want to convert for and provide the required identifier
 4. Click the conversion button to generate a downloadable zip file
 """)
@@ -54,8 +54,10 @@ if 'conversion_results' not in st.session_state:
     st.session_state.conversion_results = []
 if 'selected_spin' not in st.session_state:
     st.session_state.selected_spin = ""
-if 'manual_spin_url' not in st.session_state:
-    st.session_state.manual_spin_url = ""
+if 'manual_spin_urls' not in st.session_state:
+    st.session_state.manual_spin_urls = []
+if 'selected_manual_spin' not in st.session_state:
+    st.session_state.selected_manual_spin = ""
 if 'spin_selection_method' not in st.session_state:
     st.session_state.spin_selection_method = "account"
 
@@ -124,49 +126,131 @@ def create_folder(folder_path):
         st.error(f"Error creating folder: {response.status_code} - {response.text}")
         return False
 
-def get_spins():
-    """Get list of spin files from Sirv account."""
+def get_spins(max_results=1000):
+    """Get list of spin files from Sirv account using search API."""
     if not get_token():
         return []
 
     spins = []
-    sirvurl = 'https://api.sirv.com/v2/files/search?query=.spin'
+
+    # Construct the search query to find all .spin files, excluding trash
+    search_query = 'extension:.spin AND -dirname:\\/.Trash'
+
+    payload = {
+        'query': search_query,
+        'sort': {'filename.raw': 'asc'},
+        'from': 0,
+        'size': 100  # Fetch in batches of 100
+    }
+
+    # If we potentially need more than 1000 results, use scroll API
+    if max_results > 1000:
+        payload['scroll'] = True
+
+    sirvurl = 'https://api.sirv.com/v2/files/search'
     headers = {
         'content-type': 'application/json',
         'authorization': f'Bearer {st.session_state.token}'
     }
-    response = requests.request('GET', sirvurl, headers=headers)
+
+    response = requests.request(
+        'POST', sirvurl, headers=headers, data=json.dumps(payload)
+    )
 
     if response.status_code == 200:
         results = response.json()
-        if 'contents' in results:
-            for item in results['contents']:
-                if item['filename'].endswith('.spin'):
-                    spins.append(item['filename'])
+
+        # Process initial results
+        if 'hits' in results and results['hits']:
+            for hit in results['hits']:
+                if '_source' in hit and 'filename' in hit['_source']:
+                    filename = hit['_source']['filename']
+                    if filename.endswith('.spin'):
+                        spins.append(filename)
+
+        total_found = results.get('total', 0)
+
+        # If we need more results and scroll is supported
+        if len(spins) < total_found and len(spins) < max_results and 'scrollId' in results:
+            scroll_id = results['scrollId']
+
+            # Continue scrolling until we have all results or hit max_results
+            while len(spins) < total_found and len(spins) < max_results:
+                if not get_token():  # Refresh token if needed
+                    break
+
+                scroll_url = 'https://api.sirv.com/v2/files/search/scroll'
+                scroll_payload = {'scrollId': scroll_id}
+
+                scroll_response = requests.request(
+                    'POST', scroll_url, headers=headers, data=json.dumps(scroll_payload)
+                )
+
+                if scroll_response.status_code != 200:
+                    break
+
+                scroll_results = scroll_response.json()
+
+                if 'hits' not in scroll_results or not scroll_results['hits']:
+                    break
+
+                for hit in scroll_results['hits']:
+                    if '_source' in hit and 'filename' in hit['_source']:
+                        filename = hit['_source']['filename']
+                        if filename.endswith('.spin'):
+                            spins.append(filename)
+
+                # Update scroll_id for next iteration if available
+                if 'scrollId' in scroll_results:
+                    scroll_id = scroll_results['scrollId']
+                else:
+                    break
+
         return spins
     else:
         st.error(f"Error fetching spins: {response.status_code} - {response.text}")
         return []
+
+def process_manual_spin_urls(text_input):
+    """Process manual spin URLs/paths from text input."""
+    urls = []
+
+    # Split by newlines and process each line
+    lines = text_input.strip().split('\n')
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # If the URL includes the account URL, extract just the path
+        if account_url and line.startswith(account_url):
+            path = line.replace(account_url, "")
+        # If it's already a path starting with /, use it as is
+        elif line.startswith('/'):
+            path = line
+        # If it's a full URL but not from the account domain, skip it
+        elif line.startswith('http'):
+            st.warning(f"Skipping URL not from your Sirv account domain: {line}")
+            continue
+        # Otherwise, assume it's a path and add / if needed
+        else:
+            path = f"/{line}" if not line.startswith('/') else line
+
+        # Validate that it's a spin file
+        if not path.endswith('.spin'):
+            path = f"{path}.spin" if not path.endswith('/') else f"{path}spin.spin"
+
+        urls.append(path)
+
+    return urls
 
 def get_spin_path():
     """Get the selected spin path based on selection method."""
     if st.session_state.spin_selection_method == "account":
         return st.session_state.selected_spin
     else:
-        # For manual URL entry, extract the path
-        url = st.session_state.manual_spin_url.strip()
-        # If the URL includes the account URL, extract just the path
-        if account_url and url.startswith(account_url):
-            return url.replace(account_url, "")
-        # If it's already a path starting with /, use it as is
-        elif url.startswith('/'):
-            return url
-        # If it's a full URL but not from the account domain, show error
-        elif url.startswith('http'):
-            st.error("The spin URL must be from your Sirv account domain.")
-            return None
-        # Otherwise, assume it's a path and add / if needed
-        return f"/{url}" if not url.startswith('/') else url
+        # For manual URL entry, return the selected manual spin
+        return st.session_state.selected_manual_spin
 
 # API conversion functions
 def convert_to_msc(spin_path, msc_id):
@@ -383,8 +467,8 @@ with tab1:
     # Spin selection section
     st.header("Step 1: Select a Spin")
     spin_selection_method = st.radio(
-        "Choose how to select your spin",
-        options=["Select from account", "Enter spin URL manually"],
+        "Choose how to select your spins",
+        options=["Select from account", "Enter spin URLs manually"],
         horizontal=True,
         key="spin_selection_radio",
         on_change=lambda: setattr(st.session_state, 'spin_selection_method',
@@ -396,7 +480,8 @@ with tab1:
         st.session_state.spin_selection_method = "account"
         if client_id and client_secret and account_url:
             if get_token():
-                spins = get_spins()
+                with st.spinner("Loading spins from your account..."):
+                    spins = get_spins()
                 if spins:
                     st.session_state.selected_spin = st.selectbox(
                         "Select a spin file to convert",
@@ -412,19 +497,43 @@ with tab1:
             st.info("Please enter your Sirv API credentials in the sidebar to get started.")
     else:
         st.session_state.spin_selection_method = "manual"
-        st.session_state.manual_spin_url = st.text_input(
-            "Enter the spin URL or path",
-            value=st.session_state.manual_spin_url,
-            help="Enter the full URL to the .spin file or the path in your Sirv account (e.g., /folder/product.spin)"
+        manual_input = st.text_area(
+            "Enter spin URLs or paths (one per line)",
+            height=150,
+            help="Enter one or more spin URLs or paths, one per line. E.g., /folder/product.spin"
         )
-        if st.session_state.manual_spin_url:
-            spin_path = get_spin_path()
-            if spin_path:
-                st.success(f"Using spin path: {spin_path}")
+
+        if st.button("Add Spins"):
+            if manual_input:
+                st.session_state.manual_spin_urls = process_manual_spin_urls(manual_input)
+                if st.session_state.manual_spin_urls:
+                    st.success(f"Added {len(st.session_state.manual_spin_urls)} spin paths")
+                else:
+                    st.error("No valid spin paths found in your input")
+            else:
+                st.warning("Please enter at least one spin URL or path")
+
+        # Display and select from the manual spins list if available
+        if st.session_state.manual_spin_urls:
+            st.subheader("Your Added Spins")
+
+            st.session_state.selected_manual_spin = st.selectbox(
+                "Select a spin to convert",
+                st.session_state.manual_spin_urls,
+                index=0 if st.session_state.selected_manual_spin == "" or st.session_state.selected_manual_spin not in st.session_state.manual_spin_urls else st.session_state.manual_spin_urls.index(st.session_state.selected_manual_spin)
+            )
+
+            st.success(f"Selected spin: {st.session_state.selected_manual_spin}")
+
+            # Add button to clear the list
+            if st.button("Clear Spin List"):
+                st.session_state.manual_spin_urls = []
+                st.session_state.selected_manual_spin = ""
+                st.experimental_rerun()
 
     # Only show conversion tools if a spin is selected or entered
     spin_selected = (st.session_state.spin_selection_method == "account" and st.session_state.selected_spin) or \
-                   (st.session_state.spin_selection_method == "manual" and get_spin_path())
+                   (st.session_state.spin_selection_method == "manual" and st.session_state.selected_manual_spin)
 
     if spin_selected:
         st.header("Step 2: Choose Conversion Format")
