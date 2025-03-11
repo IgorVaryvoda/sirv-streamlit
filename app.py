@@ -39,16 +39,25 @@ different platforms like MSC, Amazon, Grainger, Walmart, Home Depot, and Lowe's.
 st.sidebar.header("Authentication")
 
 # Check if credentials are in localStorage, if not fall back to env vars
-client_id = localStorage.getItem("sirv_client_id")
-if client_id is None:
+try:
+    client_id = localStorage.getItem("sirv_client_id")
+    if client_id is None:
+        client_id = os.getenv("SIRV_CLIENT_ID", "")
+except Exception as e:
     client_id = os.getenv("SIRV_CLIENT_ID", "")
 
-client_secret = localStorage.getItem("sirv_client_secret")
-if client_secret is None:
+try:
+    client_secret = localStorage.getItem("sirv_client_secret")
+    if client_secret is None:
+        client_secret = os.getenv("SIRV_CLIENT_SECRET", "")
+except Exception as e:
     client_secret = os.getenv("SIRV_CLIENT_SECRET", "")
 
-account_url = localStorage.getItem("sirv_account_url")
-if account_url is None:
+try:
+    account_url = localStorage.getItem("sirv_account_url")
+    if account_url is None:
+        account_url = os.getenv("SIRV_ACCOUNT_URL", "")
+except Exception as e:
     account_url = os.getenv("SIRV_ACCOUNT_URL", "")
 
 # Function to save credentials to localStorage
@@ -100,14 +109,18 @@ if 'token_timestamp' not in st.session_state:
     st.session_state.token_timestamp = 0
 if 'conversion_results' not in st.session_state:
     # Try to load conversion history from localStorage
-    saved_history = localStorage.getItem("conversion_history")
-    if saved_history:
-        try:
-            # Parse JSON string back into list of dictionaries
-            st.session_state.conversion_results = json.loads(saved_history)
-        except json.JSONDecodeError:
+    try:
+        saved_history = localStorage.getItem("conversion_history")
+        if saved_history and saved_history != "null" and saved_history != "undefined":
+            try:
+                # Parse JSON string back into list of dictionaries
+                st.session_state.conversion_results = json.loads(saved_history)
+            except json.JSONDecodeError:
+                st.session_state.conversion_results = []
+        else:
             st.session_state.conversion_results = []
-    else:
+    except Exception as e:
+        # If any error occurs loading from localStorage, start with an empty list
         st.session_state.conversion_results = []
 if 'selected_spin' not in st.session_state:
     st.session_state.selected_spin = ""
