@@ -4,10 +4,14 @@ import json
 import time
 import streamlit as st
 from datetime import datetime
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key, find_dotenv
 
 # Load environment variables
-load_dotenv()
+dotenv_path = find_dotenv(raise_error_if_not_found=False)
+if dotenv_path:
+    load_dotenv(dotenv_path)
+else:
+    dotenv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
 
 # App title and description
 st.set_page_config(
@@ -37,6 +41,25 @@ client_id = os.getenv("SIRV_CLIENT_ID", "")
 client_secret = os.getenv("SIRV_CLIENT_SECRET", "")
 account_url = os.getenv("SIRV_ACCOUNT_URL", "")
 
+# Function to save credentials to .env file
+def save_credentials_to_env(client_id, client_secret, account_url):
+    """Save credentials to .env file."""
+    try:
+        if not os.path.exists(dotenv_path):
+            # Create empty .env file if it doesn't exist
+            with open(dotenv_path, 'w') as f:
+                pass
+
+        # Set each key in the .env file
+        set_key(dotenv_path, "SIRV_CLIENT_ID", client_id)
+        set_key(dotenv_path, "SIRV_CLIENT_SECRET", client_secret)
+        set_key(dotenv_path, "SIRV_ACCOUNT_URL", account_url)
+
+        return True
+    except Exception as e:
+        st.sidebar.error(f"Error saving credentials: {str(e)}")
+        return False
+
 # If any of the credentials are not in env vars, show input fields
 if not (client_id and client_secret and account_url):
     account_url = st.sidebar.text_input("Sirv Account URL", value=account_url,
@@ -45,6 +68,24 @@ if not (client_id and client_secret and account_url):
                                      help="Your Sirv API client ID")
     client_secret = st.sidebar.text_input("Client Secret", value=client_secret,
                                          type="password", help="Your Sirv API client secret")
+
+    # Add save button
+    if account_url and client_id and client_secret:
+        if st.sidebar.button("Save Credentials"):
+            if save_credentials_to_env(client_id, client_secret, account_url):
+                st.sidebar.success("Credentials saved successfully!")
+            else:
+                st.sidebar.error("Failed to save credentials.")
+else:
+    st.sidebar.success("✅ Credentials loaded from environment")
+
+    # Add button to clear credentials
+    if st.sidebar.button("Clear Saved Credentials"):
+        if save_credentials_to_env("", "", ""):
+            st.sidebar.info("Credentials cleared. Please refresh the page.")
+            client_id = ""
+            client_secret = ""
+            account_url = ""
 
 # Initialize session state for token management
 if 'token' not in st.session_state:
