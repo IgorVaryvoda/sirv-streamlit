@@ -81,10 +81,6 @@ def save_credentials_to_local_storage(client_id, client_secret):
         return False
 
 # If any of the credentials are not in localStorage, show input fields
-# Debug: Check values of client_id and client_secret right before conditional
-st.write(f"**[DEBUG] Before conditional - client_id:** `{st.session_state.client_id}`") # Debug
-st.write(f"**[DEBUG] Before conditional - client_secret:** `{st.session_state.client_secret}`") # Debug
-
 if not st.session_state.client_id or not st.session_state.client_secret: # More explicit condition
     st.session_state.client_id = st.sidebar.text_input("Client ID", value=st.session_state.client_id,
                                      help="Your Sirv API client ID")
@@ -110,6 +106,7 @@ else:
         st.session_state.client_secret = "" # Update session state
 
         localStorage.deleteAll()
+        st.sidebar.info("Credentials cleared. Please refresh your browser to complete the process.")
         time.sleep(1)  # Keep the delay - might still be helpful
         st.components.v1.html("""
             <script>
