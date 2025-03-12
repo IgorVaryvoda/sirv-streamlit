@@ -110,6 +110,15 @@ else:
         st.session_state.client_secret = "" # Update session state
         st.write("**[DEBUG] client_id and client_secret set to '' in session_state**")
 
+        time.sleep(1)  # Keep the delay - might still be helpful
+        st.write("**[DEBUG] Delay finished, about to reload page**")
+        st.write("**[DEBUG END] About to force full page reload via JavaScript**")
+        st.components.v1.html("""
+            <script>
+                window.location.reload(true);
+            </script>
+        """) # Force full page reload
+
 # Initialize session state for token management
 if 'token' not in st.session_state:
     st.session_state.token = ""
@@ -1024,5 +1033,11 @@ with tab3:
             st.session_state.conversion_results = []
             # Also clear the history in localStorage
             localStorage.setItem("conversion_history", "[]", key="clear_history")
-            st.rerun()
+            st.write("**[DEBUG] Delay finished, about to reload page**")
+            st.write("**[DEBUG END] About to force full page reload via JavaScript**")
+            st.components.v1.html("""
+                <script>
+                    window.location.reload(true);
+                </script>
+            """) # Force full page reload
 
