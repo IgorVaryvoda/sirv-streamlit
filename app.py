@@ -39,26 +39,12 @@ different platforms like MSC, Amazon, Grainger, Walmart, Home Depot, and Lowe's.
 st.sidebar.header("Authentication")
 # Helper function to format Sirv Account URL
 def format_account_url(url):
-    """Ensure the Sirv Account URL is in proper format.
-    If the input is a single word without slashes or dots, treat it as an account name. For example, 'demo' returns 'https://demo.sirv.com' and any other word returns 'https://{word}.sirv.com'.
-    Otherwise, normalize the URL to use https."""
     url = url.strip()
     if not url:
+        return ""
+    if url.startswith("https://"):
         return url
-
-    # Check if the input is a single word (i.e., does not contain '/' or '.')
-    if '/' not in url and '.' not in url:
-        if url.lower() == 'demo':
-            return 'https://demo.sirv.com'
-        else:
-            return f"https://{url}.sirv.com"
-
-    from urllib.parse import urlparse
-    parsed = urlparse(url)
-    scheme = "https"
-    domain = parsed.netloc if parsed.netloc else parsed.path.split('/')[0]
-    domain = domain.rstrip('/')
-    return f"{scheme}://{domain}"
+    return "https://" + url
 # Check if credentials are in localStorage, if not fall back to env vars
 try:
     client_id = localStorage.getItem("sirv_client_id")
@@ -406,7 +392,7 @@ def get_spin_path():
 def get_thumbnail_url(spin_path):
     """Generate a thumbnail URL for a spin."""
     # If it's already a full URL, just add ?thumb
-    if spin_path.startswith('http'):
+    if spin_path.startswith('https'):
         return f"{spin_path}?thumb"
 
     # If it's a path and we have an account URL, combine them
