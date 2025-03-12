@@ -93,29 +93,35 @@ else:
     st.write("**DEBUG MESSAGE:** Reached ELSE block - about to create button")  # <--- ADD THIS DEBUG LINE
     # Add button to clear credentials
     if st.sidebar.button("Clear Saved Credentials"):
-        st.write("**DEBUG MESSAGE:** Clear Credentials Button Clicked - CHECKING IF THIS SHOWS") # <---- VERY IMPORTANT DEBUG LINE
-        st.write("**Debug: Clear Credentials Button Clicked**") # Debug print
-        # Clear the credentials from localStorage
-        localStorage.setItem("sirv_client_id", "", key="clear_client_id")
-        localStorage.setItem("sirv_client_secret", "", key="clear_client_secret")
-        # localStorage.setItem("sirv_account_url", "", key="clear_account_url") # No longer needed
-        st.write("**DEBUG MESSAGE:** localStorage clear calls executed") # Debug print
+        st.write("**[DEBUG START] Clear Credentials Button Clicked**") # Make it very obvious
 
-        # Debug: Read from localStorage immediately after setting to empty
-        debug_client_id_ls = localStorage.getItem("sirv_client_id")
-        debug_client_secret_ls = localStorage.getItem("sirv_client_secret")
-        st.write(f"**DEBUG MESSAGE:** localStorage client_id after clear: `{debug_client_id_ls}`")
-        st.write(f"**DEBUG MESSAGE:** localStorage client_secret after clear: `{debug_client_secret_ls}`")
+        # Debug: Read from localStorage BEFORE clearing (keep for now for comparison)
+        debug_client_id_before_clear = localStorage.getItem("sirv_client_id")
+        debug_client_secret_before_clear = localStorage.getItem("sirv_client_secret")
+        st.write(f"**[DEBUG] localStorage client_id BEFORE clear: `{debug_client_id_before_clear}`")
+        st.write(f"**[DEBUG] localStorage client_secret BEFORE clear: `{debug_client_secret_before_clear}`")
+
+        # Remove the localStorage clear calls - they are not working reliably for clearing
+        # localStorage.setItem("sirv_client_id", "", key="clear_client_id")
+        # localStorage.setItem("sirv_client_secret", "", key="clear_client_secret")
+        st.write("**[DEBUG] localStorage clear calls REMOVED from code**") # Indicate removal
+
+        # Debug: Read from localStorage immediately AFTER (setItem calls removed, should still show old values)
+        debug_client_id_after_clear_setItem = localStorage.getItem("sirv_client_id")
+        debug_client_secret_after_setItem = localStorage.getItem("sirv_client_secret")
+        st.write(f"**[DEBUG] localStorage client_id AFTER (setItem removed): `{debug_client_id_after_clear_setItem}`")
+        st.write(f"**[DEBUG] localStorage client_secret AFTER (setItem removed): `{debug_client_secret_after_setItem}`")
 
         st.sidebar.info("Credentials cleared. Please refresh the page.")
         client_id = ""
         client_secret = ""
         account_url = ""
-        st.write(f"**Debug: client_id before rerun:** `{client_id}`") # Debug print
-        st.write(f"**Debug: client_secret before rerun:** `{client_secret}`") # Debug print
+        st.write(f"**Debug: client_id before rerun:** `{client_id}`")
+        st.write(f"**Debug: client_secret before rerun:** `{client_secret}`")
 
-        time.sleep(1)  # Add a 1-second delay
-        st.write("**DEBUG MESSAGE:** Delay finished, about to rerun")
+        time.sleep(1)  # Keep a short delay, but it might not be strictly necessary now
+        st.write("**[DEBUG] Delay finished, about to rerun**")
+        st.write("**[DEBUG END] About to st.rerun()**") # Mark the very end of the block
         st.rerun() # Force a rerun to update the UI immediately
 
 # Initialize session state for token management
