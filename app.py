@@ -93,6 +93,7 @@ else:
 
     # Add button to clear credentials
     if st.sidebar.button("Clear Saved Credentials"):
+        st.write("**DEBUG MESSAGE:** Clear Credentials Button Clicked - CHECKING IF THIS SHOWS") # <---- VERY IMPORTANT DEBUG LINE
         st.write("**Debug: Clear Credentials Button Clicked**") # Debug print
         # Clear the credentials from localStorage
         localStorage.setItem("sirv_client_id", "", key="clear_client_id")
