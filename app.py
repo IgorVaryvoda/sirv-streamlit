@@ -93,6 +93,7 @@ else:
 
     # Add button to clear credentials
     if st.sidebar.button("Clear Saved Credentials"):
+        st.write("**Debug: Clear Credentials Button Clicked**") # Debug print
         # Clear the credentials from localStorage
         localStorage.setItem("sirv_client_id", "", key="clear_client_id")
         localStorage.setItem("sirv_client_secret", "", key="clear_client_secret")
@@ -101,6 +102,9 @@ else:
         client_id = ""
         client_secret = ""
         account_url = ""
+        st.write(f"**Debug: client_id after clear:** `{client_id}`") # Debug print
+        st.write(f"**Debug: client_secret after clear:** `{client_secret}`") # Debug print
+        st.write("**Debug: localStorage clear calls executed**") # Debug print
         st.rerun() # Force a rerun to update the UI immediately
 
 # Initialize session state for token management
