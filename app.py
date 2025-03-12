@@ -710,7 +710,7 @@ with tab1:
     # Test connection and fetch spins if credentials are provided
     if spin_selection_method == "Select from account":
         st.session_state.spin_selection_method = "account"
-        if client_id and client_secret and account_url:
+        if client_id and client_secret:
             if get_token():
                 with st.spinner("Loading spins from your account..."):
                     spins = get_spins()
