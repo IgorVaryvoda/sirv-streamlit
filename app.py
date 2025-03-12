@@ -132,7 +132,25 @@ if 'spin_selection_method' not in st.session_state:
     st.session_state.spin_selection_method = "account"
 if 'bulk_conversion_data' not in st.session_state:
     st.session_state.bulk_conversion_data = []
-
+def fetch_account_url():
+    """Fetch the cdnURL from the Sirv account details using the current token."""
+    sirvurl = 'https://api.sirv.com/v2/account'
+    headers = {
+        'authorization': f'Bearer {st.session_state.token}',
+        'content-type': 'application/json'
+    }
+    response = requests.get(sirvurl, headers=headers)
+    if response.status_code == 200:
+        data = response.json()
+        if 'cdnURL' in data:
+            return format_account_url(data['cdnURL'])
+        elif 'cdnTempURL' in data:
+            return format_account_url(data['cdnTempURL'])
+        else:
+            return ""
+    else:
+        st.error(f"Error fetching account details: {response.status_code} - {response.text}")
+        return ""
 # Token management functions
 TOKEN_EXPIRY = 4.5 * 60  # 4.5 minutes in seconds (token expires after 5 minutes)
 
@@ -995,22 +1013,3 @@ with tab3:
             localStorage.setItem("conversion_history", "[]", key="clear_history")
             st.experimental_rerun()
 
-def fetch_account_url():
-    """Fetch the cdnURL from the Sirv account details using the current token."""
-    sirvurl = 'https://api.sirv.com/v2/account'
-    headers = {
-        'authorization': f'Bearer {st.session_state.token}',
-        'content-type': 'application/json'
-    }
-    response = requests.get(sirvurl, headers=headers)
-    if response.status_code == 200:
-        data = response.json()
-        if 'cdnURL' in data:
-            return format_account_url(data['cdnURL'])
-        elif 'cdnTempURL' in data:
-            return format_account_url(data['cdnTempURL'])
-        else:
-            return ""
-    else:
-        st.error(f"Error fetching account details: {response.status_code} - {response.text}")
-        return ""
