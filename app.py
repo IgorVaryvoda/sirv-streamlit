@@ -1027,11 +1027,5 @@ with tab3:
             st.session_state.conversion_results = []
             # Also clear the history in localStorage
             localStorage.setItem("conversion_history", "[]", key="clear_history")
-            st.write("**[DEBUG] Delay finished, about to reload page**")
-            st.write("**[DEBUG END] About to force full page reload via JavaScript**")
-            st.components.v1.html("""
-                <script>
-                    window.location.reload(true);
-                </script>
-            """) # Force full page reload
+
 
