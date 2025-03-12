@@ -37,7 +37,17 @@ different platforms like MSC, Amazon, Grainger, Walmart, Home Depot, and Lowe's.
 
 # Sidebar for authentication
 st.sidebar.header("Authentication")
-
+# Helper function to format Sirv Account URL
+def format_account_url(url):
+    """Ensure the Sirv Account URL is in the proper format: https://accountname.sirv.com or a custom domain."""
+    if url:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        scheme = parsed.scheme if parsed.scheme == "https" else "https"
+        # If netloc is empty, use the first portion of the path as domain
+        domain = parsed.netloc if parsed.netloc else parsed.path.split('/')[0]
+        return f"{scheme}://{domain.rstrip('/') }"
+    return url
 # Check if credentials are in localStorage, if not fall back to env vars
 try:
     client_id = localStorage.getItem("sirv_client_id")
@@ -59,6 +69,11 @@ try:
         account_url = os.getenv("SIRV_ACCOUNT_URL", "")
 except Exception as e:
     account_url = os.getenv("SIRV_ACCOUNT_URL", "")
+
+if account_url:
+    account_url = format_account_url(account_url)
+
+
 
 # Function to save credentials to localStorage
 def save_credentials_to_local_storage(client_id, client_secret, account_url):
