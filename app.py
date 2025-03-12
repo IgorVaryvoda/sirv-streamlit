@@ -414,7 +414,13 @@ def get_thumbnail_url(spin_path):
         return f"{spin_path}?thumb"
 
     # If it's a path and we have an account URL, combine them
-    if account_url and account_url != "":
+    global account_url # Ensure we are using the global account_url
+    if not account_url: # If account_url is empty, fetch it
+        if not get_token(): # Ensure we have a token first and refresh if needed
+            return None # If no token, cannot fetch account_url, return None
+        account_url = fetch_account_url() # Fetch account_url
+
+    if account_url and account_url != "": # Now check if account_url is available
         # Make sure there's no double slash between account_url and spin_path
         if account_url.endswith('/') and spin_path.startswith('/'):
             return f"{account_url}{spin_path[1:]}?thumb"
