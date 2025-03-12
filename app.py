@@ -414,7 +414,7 @@ def get_thumbnail_url(spin_path):
         return f"{spin_path}?thumb"
 
     # If it's a path and we have an account URL, combine them
-    if account_url:
+    if account_url and account_url != "":
         # Make sure there's no double slash between account_url and spin_path
         if account_url.endswith('/') and spin_path.startswith('/'):
             return f"{account_url}{spin_path[1:]}?thumb"
