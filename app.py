@@ -737,7 +737,7 @@ with tab1:
                         "Select a spin file to convert",
                         spins,
                         index=0 if st.session_state.selected_spin == "" else spins.index(st.session_state.selected_spin) if st.session_state.selected_spin in spins else 0,
-                        on_change=st.experimental_rerun
+                        on_change=st.rerun
                     )
                     st.success(f"Selected spin: {st.session_state.selected_spin}")
                     # Display thumbnail for the selected spin
@@ -788,7 +788,7 @@ with tab1:
             if st.button("Clear Spin List"):
                 st.session_state.manual_spin_urls = []
                 st.session_state.selected_manual_spin = ""
-                st.experimental_rerun()
+                st.rerun()
 
     # Only show conversion tools if a spin is selected or entered
     spin_selected = (st.session_state.spin_selection_method == "account" and st.session_state.selected_spin) or \
@@ -1012,5 +1012,5 @@ with tab3:
             st.session_state.conversion_results = []
             # Also clear the history in localStorage
             localStorage.setItem("conversion_history", "[]", key="clear_history")
-            st.experimental_rerun()
+            st.rerun()
 
