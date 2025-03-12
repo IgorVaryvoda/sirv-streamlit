@@ -47,18 +47,24 @@ def format_account_url(url):
     return "https://" + url
 # Check if credentials are in localStorage, if not fall back to env vars
 try:
-    client_id = localStorage.getItem("sirv_client_id")
-    if client_id is None:
-        client_id = os.getenv("SIRV_CLIENT_ID", "")
+    if 'client_id' not in st.session_state: # Initialize in session state if not present
+        st.session_state.client_id = localStorage.getItem("sirv_client_id")
+        if st.session_state.client_id is None:
+            st.session_state.client_id = os.getenv("SIRV_CLIENT_ID", "")
+    client_id = st.session_state.client_id # Use session state for client_id
 except Exception as e:
-    client_id = os.getenv("SIRV_CLIENT_ID", "")
+    st.session_state.client_id = os.getenv("SIRV_CLIENT_ID", "") # Initialize even on error
+    client_id = st.session_state.client_id
 
 try:
-    client_secret = localStorage.getItem("sirv_client_secret")
-    if client_secret is None:
-        client_secret = os.getenv("SIRV_CLIENT_SECRET", "")
+    if 'client_secret' not in st.session_state: # Initialize in session state if not present
+        st.session_state.client_secret = localStorage.getItem("sirv_client_secret")
+        if st.session_state.client_secret is None:
+            st.session_state.client_secret = os.getenv("SIRV_CLIENT_SECRET", "")
+    client_secret = st.session_state.client_secret # Use session state for client_secret
 except Exception as e:
-    client_secret = os.getenv("SIRV_CLIENT_SECRET", "")
+    st.session_state.client_secret = os.getenv("SIRV_CLIENT_SECRET", "") # Initialize even on error
+    client_secret = st.session_state.client_secret
 
 # Remove account_url retrieval from storage and env, initialize it as empty
 account_url = ""
@@ -76,15 +82,15 @@ def save_credentials_to_local_storage(client_id, client_secret):
 
 # If any of the credentials are not in localStorage, show input fields
 if not (client_id and client_secret):
-    client_id = st.sidebar.text_input("Client ID", value=client_id,
+    st.session_state.client_id = st.sidebar.text_input("Client ID", value=client_id,
                                      help="Your Sirv API client ID")
-    client_secret = st.sidebar.text_input("Client Secret", value=client_secret,
+    st.session_state.client_secret = st.sidebar.text_input("Client Secret", value=client_secret,
                                          type="password", help="Your Sirv API client secret")
 
     # Add save button
     if client_id and client_secret:
         if st.sidebar.button("Save Credentials to Your Browser"):
-            if save_credentials_to_local_storage(client_id, client_secret):
+            if save_credentials_to_local_storage(st.session_state.client_id, st.session_state.client_secret):
                 st.sidebar.success("Credentials saved in your browser!")
             else:
                 st.sidebar.error("Failed to save credentials.")
@@ -93,36 +99,12 @@ else:
     st.write("**DEBUG MESSAGE:** Reached ELSE block - about to create button")  # <--- ADD THIS DEBUG LINE
     # Add button to clear credentials
     if st.sidebar.button("Clear Saved Credentials"):
-        st.write("**[DEBUG START] Clear Credentials Button Clicked**") # Make it very obvious
+        st.write("**[DEBUG START] Clear Credentials Button Clicked**")
 
-        # Debug: Read from localStorage BEFORE clearing (keep for now for comparison)
-        debug_client_id_before_clear = localStorage.getItem("sirv_client_id")
-        debug_client_secret_before_clear = localStorage.getItem("sirv_client_secret")
-        st.write(f"**[DEBUG] localStorage client_id BEFORE clear: `{debug_client_id_before_clear}`")
-        st.write(f"**[DEBUG] localStorage client_secret BEFORE clear: `{debug_client_secret_before_clear}`")
-
-        # Remove the localStorage clear calls - they are not working reliably for clearing
-        # localStorage.setItem("sirv_client_id", "", key="clear_client_id")
-        # localStorage.setItem("sirv_client_secret", "", key="clear_client_secret")
-        st.write("**[DEBUG] localStorage clear calls REMOVED from code**") # Indicate removal
-
-        # Debug: Read from localStorage immediately AFTER (setItem calls removed, should still show old values)
-        debug_client_id_after_clear_setItem = localStorage.getItem("sirv_client_id")
-        debug_client_secret_after_setItem = localStorage.getItem("sirv_client_secret")
-        st.write(f"**[DEBUG] localStorage client_id AFTER (setItem removed): `{debug_client_id_after_clear_setItem}`")
-        st.write(f"**[DEBUG] localStorage client_secret AFTER (setItem removed): `{debug_client_secret_after_setItem}`")
-
-        st.sidebar.info("Credentials cleared. Please refresh the page.")
-        client_id = ""
-        client_secret = ""
-        account_url = ""
-        st.write(f"**Debug: client_id before rerun:** `{client_id}`")
-        st.write(f"**Debug: client_secret before rerun:** `{client_secret}`")
-
-        time.sleep(1)  # Keep a short delay, but it might not be strictly necessary now
-        st.write("**[DEBUG] Delay finished, about to rerun**")
-        st.write("**[DEBUG END] About to st.rerun()**") # Mark the very end of the block
-        st.rerun() # Force a rerun to update the UI immediately
+        # Set client_id and client_secret in session_state to empty strings
+        st.session_state.client_id = ""  # Update session state
+        st.session_state.client_secret = "" # Update session state
+        st.write("**[DEBUG] client_id and client_secret set to '' in session_state**")
 
 # Initialize session state for token management
 if 'token' not in st.session_state:
