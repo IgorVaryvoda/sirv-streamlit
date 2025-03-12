@@ -89,7 +89,7 @@ if not st.session_state.client_id or not st.session_state.client_secret: # More 
 
     # Add save button
     if st.session_state.client_id and st.session_state.client_secret:
-        if st.sidebar.button("Start and Save Credentials to Your Browser"):
+        if st.sidebar.button("Apply and Save Credentials to Your Browser"):
             if save_credentials_to_local_storage(st.session_state.client_id, st.session_state.client_secret):
                 st.sidebar.success("Credentials saved in your browser!")
             else:
