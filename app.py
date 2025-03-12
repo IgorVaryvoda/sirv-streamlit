@@ -81,14 +81,18 @@ def save_credentials_to_local_storage(client_id, client_secret):
         return False
 
 # If any of the credentials are not in localStorage, show input fields
-if not (client_id and client_secret):
-    st.session_state.client_id = st.sidebar.text_input("Client ID", value=client_id,
+# Debug: Check values of client_id and client_secret right before conditional
+st.write(f"**[DEBUG] Before conditional - client_id:** `{st.session_state.client_id}`") # Debug
+st.write(f"**[DEBUG] Before conditional - client_secret:** `{st.session_state.client_secret}`") # Debug
+
+if not st.session_state.client_id or not st.session_state.client_secret: # More explicit condition
+    st.session_state.client_id = st.sidebar.text_input("Client ID", value=st.session_state.client_id,
                                      help="Your Sirv API client ID")
-    st.session_state.client_secret = st.sidebar.text_input("Client Secret", value=client_secret,
+    st.session_state.client_secret = st.sidebar.text_input("Client Secret", value=st.session_state.client_secret,
                                          type="password", help="Your Sirv API client secret")
 
     # Add save button
-    if client_id and client_secret:
+    if st.session_state.client_id and st.session_state.client_secret:
         if st.sidebar.button("Save Credentials to Your Browser"):
             if save_credentials_to_local_storage(st.session_state.client_id, st.session_state.client_secret):
                 st.sidebar.success("Credentials saved in your browser!")
