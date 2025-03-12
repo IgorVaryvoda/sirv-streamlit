@@ -96,11 +96,12 @@ else:
         # Clear the credentials from localStorage
         localStorage.setItem("sirv_client_id", "", key="clear_client_id")
         localStorage.setItem("sirv_client_secret", "", key="clear_client_secret")
-        localStorage.setItem("sirv_account_url", "", key="clear_account_url")
+        # localStorage.setItem("sirv_account_url", "", key="clear_account_url") # No longer needed
         st.sidebar.info("Credentials cleared. Please refresh the page.")
         client_id = ""
         client_secret = ""
         account_url = ""
+        st.rerun() # Force a rerun to update the UI immediately
 
 # Initialize session state for token management
 if 'token' not in st.session_state:
