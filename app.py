@@ -28,7 +28,7 @@ This app allows you to convert Sirv 360° spins to various formats required by
 different platforms like MSC, Amazon, Grainger, Walmart, Home Depot, and Lowe's.
 
 **How it works:**
-1. Enter your Sirv API credentials in the sidebar
+1. Enter your Sirv API credentials in the sidebar (<a href="https://my.sirv.com/#/account/settings/api">get or create API credentials</a>)
 2. Select a spin file from your account OR enter one or more spin URLs manually
 3. Choose the platform you want to convert for and provide the required identifier
 4. Click the conversion button to generate a downloadable zip file
