@@ -89,7 +89,7 @@ if not st.session_state.client_id or not st.session_state.client_secret: # More 
 
     # Add save button
     if st.session_state.client_id and st.session_state.client_secret:
-        if st.sidebar.button("Save Credentials to Your Browser"):
+        if st.sidebar.button("Start and Save Credentials to Your Browser"):
             if save_credentials_to_local_storage(st.session_state.client_id, st.session_state.client_secret):
                 st.sidebar.success("Credentials saved in your browser!")
             else:
@@ -230,15 +230,21 @@ def create_folder(folder_path):
         st.error(f"Error creating folder: {response.status_code} - {response.text}")
         return False
 
-def get_spins(max_results=1000):
+def get_spins(search_query='', max_results=1000):
     """Get list of spin files from Sirv account using search API."""
     if not get_token():
         return []
 
     spins = []
 
-    # Construct the search query to find all .spin files, excluding trash
-    search_query = 'extension:.spin AND -dirname:\\/.Trash'
+    # Construct the base search query to exclude trash
+    base_query = '-dirname:\\/.Trash'
+
+    # Add the user's search query if provided
+    if search_query:
+        search_query = f'{search_query} AND extension:.spin AND {base_query}'
+    else:
+        search_query = f'extension:.spin AND {base_query}'
 
     payload = {
         'query': search_query,
@@ -747,8 +753,9 @@ with tab1:
         st.session_state.spin_selection_method = "account"
         if client_id and client_secret:
             if get_token():
+                spin_search_query = st.text_input("Search spins", placeholder="Enter spin name or keywords...", key="spin_search_query")
                 with st.spinner("Loading spins from your account..."):
-                    spins = get_spins()
+                    spins = get_spins(search_query=spin_search_query)
                 if spins:
                     st.session_state.selected_spin = st.selectbox(
                         "Select a spin file to convert",
