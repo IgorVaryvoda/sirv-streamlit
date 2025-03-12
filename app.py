@@ -736,7 +736,8 @@ with tab1:
                     st.session_state.selected_spin = st.selectbox(
                         "Select a spin file to convert",
                         spins,
-                        index=0 if st.session_state.selected_spin == "" else spins.index(st.session_state.selected_spin) if st.session_state.selected_spin in spins else 0
+                        index=0 if st.session_state.selected_spin == "" else spins.index(st.session_state.selected_spin) if st.session_state.selected_spin in spins else 0,
+                        on_change=st.experimental_rerun
                     )
                     st.success(f"Selected spin: {st.session_state.selected_spin}")
                     # Display thumbnail for the selected spin
