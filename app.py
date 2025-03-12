@@ -90,7 +90,7 @@ if not (client_id and client_secret):
                 st.sidebar.error("Failed to save credentials.")
 else:
     st.sidebar.success("✅ Credentials loaded from your browser")
-
+    st.write("**DEBUG MESSAGE:** Reached ELSE block - about to create button")  # <--- ADD THIS DEBUG LINE
     # Add button to clear credentials
     if st.sidebar.button("Clear Saved Credentials"):
         st.write("**DEBUG MESSAGE:** Clear Credentials Button Clicked - CHECKING IF THIS SHOWS") # <---- VERY IMPORTANT DEBUG LINE
