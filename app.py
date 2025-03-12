@@ -746,10 +746,7 @@ with tab1:
                     )
                     st.success(f"Selected spin: {st.session_state.selected_spin}")
                     # Display thumbnail for the selected spin
-                    st.write(f"**Debug - account_url:** `{account_url}`")
-                    st.write(f"**Debug - selected_spin:** `{st.session_state.selected_spin}`")
                     thumbnail_url = get_thumbnail_url(st.session_state.selected_spin)
-                    st.write(f"**Debug - thumbnail_url (Conversion Tools):** `{thumbnail_url}`")
                     if thumbnail_url:
                         st.image(thumbnail_url, caption="Spin Thumbnail", width=300)
                 else:
@@ -990,10 +987,7 @@ with tab3:
             # Display thumbnail in the first column
             with col1:
                 if 'spin_path' in result:
-                    st.write(f"**Debug - account_url (History):** `{account_url}`")
-                    st.write(f"**Debug - result['spin_path'] (History):** `{result['spin_path']}`")
                     thumbnail_url = get_thumbnail_url(result['spin_path'])
-                    st.write(f"**Debug - thumbnail_url (History):** `{thumbnail_url}`")
                     if thumbnail_url:
                         st.image(thumbnail_url, width=100)
 
