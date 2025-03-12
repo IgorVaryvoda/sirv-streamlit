@@ -110,9 +110,9 @@ else:
         st.session_state.client_secret = "" # Update session state
         st.write("**[DEBUG] client_id and client_secret set to '' in session_state**")
 
-        localStorage.setItem("sirv_client_id", null, key="set_client_id_null") # Try setting to null
-        localStorage.setItem("sirv_client_secret", null, key="set_client_secret_null") # Try setting to null
-        st.write("**[DEBUG] localStorage setItem to null calls executed**")
+        localStorage.setItem("sirv_client_id", None, key="set_client_id_null") # Try setting to None
+        localStorage.setItem("sirv_client_secret", None, key="set_client_secret_null") # Try setting to None
+        st.write("**[DEBUG] localStorage setItem to None calls executed**")
 
         time.sleep(1)  # Keep the delay - might still be helpful
         st.write("**[DEBUG] Delay finished, about to reload page**")
@@ -132,7 +132,7 @@ if 'conversion_results' not in st.session_state:
     # Try to load conversion history from localStorage
     try:
         saved_history = localStorage.getItem("conversion_history")
-        if saved_history and saved_history != "null" and saved_history != "undefined":
+        if saved_history is not None and saved_history != "undefined":
             try:
                 # Parse JSON string back into list of dictionaries
                 st.session_state.conversion_results = json.loads(saved_history)
