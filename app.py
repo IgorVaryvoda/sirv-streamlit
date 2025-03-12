@@ -39,15 +39,26 @@ different platforms like MSC, Amazon, Grainger, Walmart, Home Depot, and Lowe's.
 st.sidebar.header("Authentication")
 # Helper function to format Sirv Account URL
 def format_account_url(url):
-    """Ensure the Sirv Account URL is in the proper format: https://accountname.sirv.com or a custom domain."""
-    if url:
-        from urllib.parse import urlparse
-        parsed = urlparse(url)
-        scheme = parsed.scheme if parsed.scheme == "https" else "https"
-        # If netloc is empty, use the first portion of the path as domain
-        domain = parsed.netloc if parsed.netloc else parsed.path.split('/')[0]
-        return f"{scheme}://{domain.rstrip('/') }"
-    return url
+    """Ensure the Sirv Account URL is in proper format.
+    If the input is a single word without slashes or dots, treat it as an account name. For example, 'demo' returns 'https://demo.sirv.com' and any other word returns 'https://{word}.sirv.com'.
+    Otherwise, normalize the URL to use https."""
+    url = url.strip()
+    if not url:
+        return url
+
+    # Check if the input is a single word (i.e., does not contain '/' or '.')
+    if '/' not in url and '.' not in url:
+        if url.lower() == 'demo':
+            return 'https://demo.sirv.com'
+        else:
+            return f"https://{url}.sirv.com"
+
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    scheme = "https"
+    domain = parsed.netloc if parsed.netloc else parsed.path.split('/')[0]
+    domain = domain.rstrip('/')
+    return f"{scheme}://{domain}"
 # Check if credentials are in localStorage, if not fall back to env vars
 try:
     client_id = localStorage.getItem("sirv_client_id")
@@ -63,43 +74,31 @@ try:
 except Exception as e:
     client_secret = os.getenv("SIRV_CLIENT_SECRET", "")
 
-try:
-    account_url = localStorage.getItem("sirv_account_url")
-    if account_url is None:
-        account_url = os.getenv("SIRV_ACCOUNT_URL", "")
-except Exception as e:
-    account_url = os.getenv("SIRV_ACCOUNT_URL", "")
-
-if account_url:
-    account_url = format_account_url(account_url)
-
-
+# Remove account_url retrieval from storage and env, initialize it as empty
+account_url = ""
 
 # Function to save credentials to localStorage
-def save_credentials_to_local_storage(client_id, client_secret, account_url):
+def save_credentials_to_local_storage(client_id, client_secret):
     """Save credentials to browser localStorage."""
     try:
         localStorage.setItem("sirv_client_id", client_id, key="save_client_id")
         localStorage.setItem("sirv_client_secret", client_secret, key="save_client_secret")
-        localStorage.setItem("sirv_account_url", account_url, key="save_account_url")
         return True
     except Exception as e:
         st.sidebar.error(f"Error saving credentials: {str(e)}")
         return False
 
 # If any of the credentials are not in localStorage, show input fields
-if not (client_id and client_secret and account_url):
-    account_url = st.sidebar.text_input("Sirv Account URL", value=account_url,
-                                       help="Your Sirv account URL, e.g., https://demo.sirv.com")
+if not (client_id and client_secret):
     client_id = st.sidebar.text_input("Client ID", value=client_id,
                                      help="Your Sirv API client ID")
     client_secret = st.sidebar.text_input("Client Secret", value=client_secret,
                                          type="password", help="Your Sirv API client secret")
 
     # Add save button
-    if account_url and client_id and client_secret:
+    if client_id and client_secret:
         if st.sidebar.button("Save Credentials to Your Browser"):
-            if save_credentials_to_local_storage(client_id, client_secret, account_url):
+            if save_credentials_to_local_storage(client_id, client_secret):
                 st.sidebar.success("Credentials saved in your browser!")
             else:
                 st.sidebar.error("Failed to save credentials.")
@@ -171,6 +170,9 @@ def get_token():
         if response.status_code == 200:
             st.session_state.token = response.json()['token']
             st.session_state.token_timestamp = current_time
+            global account_url
+            if not account_url:
+                account_url = fetch_account_url()
             return True
         else:
             st.error(f"Error getting token: {response.status_code} - {response.text}")
@@ -1006,3 +1008,23 @@ with tab3:
             # Also clear the history in localStorage
             localStorage.setItem("conversion_history", "[]", key="clear_history")
             st.experimental_rerun()
+
+def fetch_account_url():
+    """Fetch the cdnURL from the Sirv account details using the current token."""
+    sirvurl = 'https://api.sirv.com/v2/account'
+    headers = {
+        'authorization': f'Bearer {st.session_state.token}',
+        'content-type': 'application/json'
+    }
+    response = requests.get(sirvurl, headers=headers)
+    if response.status_code == 200:
+        data = response.json()
+        if 'cdnURL' in data:
+            return format_account_url(data['cdnURL'])
+        elif 'cdnTempURL' in data:
+            return format_account_url(data['cdnTempURL'])
+        else:
+            return ""
+    else:
+        st.error(f"Error fetching account details: {response.status_code} - {response.text}")
+        return ""
