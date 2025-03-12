@@ -110,6 +110,10 @@ else:
         st.session_state.client_secret = "" # Update session state
         st.write("**[DEBUG] client_id and client_secret set to '' in session_state**")
 
+        localStorage.setItem("sirv_client_id", null, key="set_client_id_null") # Try setting to null
+        localStorage.setItem("sirv_client_secret", null, key="set_client_secret_null") # Try setting to null
+        st.write("**[DEBUG] localStorage setItem to null calls executed**")
+
         time.sleep(1)  # Keep the delay - might still be helpful
         st.write("**[DEBUG] Delay finished, about to reload page**")
         st.write("**[DEBUG END] About to force full page reload via JavaScript**")
